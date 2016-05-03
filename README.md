@@ -4,6 +4,8 @@
 import "github.com/fatlotus/serveseq"
 ```
 
+[![Circle CI](https://circleci.com/gh/fatlotus/serveseq.svg?style=svg)](https://circleci.com/gh/fatlotus/serveseq)
+
 ServeSeq is like http.ServeMux, except that it runs one http.Handler after
 another. It is designed to allow you to do two things:
 
@@ -11,7 +13,7 @@ another. It is designed to allow you to do two things:
 2. Overlaying static handlers with dynamic handlers.
 
 In this way, it does most of what a web framework would need to, without adding
-a hugely complicated API or new types.
+a hugely complicated API, or new types.
 
 ## Example
 
