@@ -1,10 +1,6 @@
 # ServeSeq: http.ServeMux, but for sequencing
 
-```go
-import "github.com/fatlotus/serveseq"
-```
-
-[![Circle CI](https://circleci.com/gh/fatlotus/serveseq.svg?style=svg)](https://circleci.com/gh/fatlotus/serveseq)
+[![Circle CI](https://circleci.com/gh/fatlotus/serveseq.svg?style=svg)](https://circleci.com/gh/fatlotus/serveseq) `"github.com/fatlotus/serveseq"`
 
 ServeSeq is like http.ServeMux, except that it runs one http.Handler after
 another. It is designed to allow you to do two things:
