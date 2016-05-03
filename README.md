@@ -1,53 +1,92 @@
 # ServeSeq: http.ServeMux, but for sequencing
 
-Rubyists and Pythonistas love to compose web applications out of layers of
-intermediate software, or middleware, but left out in the cold when switching
-to Go, whose thread model makes thread local variables somewhat ugly.
+```go
+import "github.com/fatlotus/serveseq"
+```
 
-I propose a different model. Essentially, it replaces
+ServeSeq is like http.ServeMux, except that it runs one http.Handler after
+another. It is designed to allow you to do two things:
+
+1. Authentication (pre-filtering) middleware.
+2. Overlaying static handlers with dynamic handlers.
+
+In this way, it does most of what a web framework would need to, without adding
+a hugely complicated API or new types.
+
+## Example
+
+Suppose we want to build an app with authentication and a custom error page. We
+start by defining a basic login handler. ServeSeq skips the remaining handlers
+if we write a response, so if we are logged in, the handler simply falls
+through.
 
 ```go
-func Allowed(w http.ResponseWriter, r *http.Request, role string) bool {
-    if r.FormValue("role") != role {
-        http.Error(w, r, "forbidden", 403)
-        return false
-    }
-    return true
-}
+// If the user is not logged in, redirect to the login page.
+func RequireLogin(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/login" {
+		fmt.Fprintf(w, "[login form]")
 
-func MyHandler(w http.ResponseWriter, r *http.Request) {
-    if !auth.Allowed(w, r, "administrator") {
-        return
-    }
-    
-    fmt.Fprintf(w, "hello world")
-}
-
-func main() {
-    http.ListenAndServe(":8080", http.HandleFunc(MyHandler))
+	} else if r.FormValue("session") == "" {
+		http.Redirect(w, r, "/login", 307)
+	}
 }
 ```
 
-with
+Next, we define what happens _after_ the application. In this case, we override
+the default 404 handler and provide our own message.
 
 ```go
-func Allowed(string role) {
-    return http.HandleFunc(func (w http.ResponseWriter, r *http.Request) {
-        if r.FormValue("role") != role {
-            http.Error(w, r, "forbidden", 403)
-        }
-    })
-}
-
-func MyHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "hello world")
-}
-
-func main() {
-    seq := serveseq.New()
-    seq.Append(Allowed("administrator"))
-    seq.AppendFunc(MyHandler)
-
-    http.ListenAndServe(":8080", seq)
+// Capture any unhandled requests.
+func CustomNotFound(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(404)
+	fmt.Fprintf(w, "not found :(")
 }
 ```
+
+We can glue these two functions before and after a standard `http.ServeMux`. 
+
+```go
+func main() {
+	// Create a conventional application.
+	mux := http.NewServeMux()
+	mux.HandleFunc("/app", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "hello world!")
+	})
+
+	// Compose it with some middleware.
+	seq := serveseq.New()
+	seq.NextFunc(RequireLogin)
+	seq.Next(mux)
+	seq.NextFunc(CustomNotFound)
+
+  http.ListenAndServe(":9000", seq)
+}
+```
+
+Voilà! Simple, type-safe composition.
+
+## License
+
+ServeSeq is licensed under the MIT License:
+
+> Copyright (c) 2016 Jeremy Archer
+> 
+> Permission is hereby granted, free of charge, to any person obtaining
+> a copy of this software and associated documentation files (the
+> "Software"), to deal in the Software without restriction, including
+> without limitation the rights to use, copy, modify, merge, publish,
+> distribute, sublicense, and/or sell copies of the Software, and to
+> permit persons to whom the Software is furnished to do so, subject to
+> the following conditions:
+> 
+> The above copyright notice and this permission notice shall be
+> included in all copies or substantial portions of the Software.
+> 
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+> NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+> BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+> ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+> CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
