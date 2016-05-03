@@ -4,6 +4,6 @@
 //  1. Authentication (pre-filtering) middleware.
 //  2. Overlaying static handlers with dynamic handlers.
 //
-// In this way, it encapsulates most of the requirements of a web framework
-// without adding a hugely complicated API.
+// it does most of what a web framework would need to, without adding
+// a hugely complicated API, or new types.
 package serveseq
